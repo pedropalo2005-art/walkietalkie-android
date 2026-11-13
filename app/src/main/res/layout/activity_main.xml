@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/radio_body_dark"
+    android:padding="20dp">
+
+    <!-- Top Antenna & Brand Header -->
+    <TextView
+        android:id="@+id/tvBrand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="WALKIE TALIE // CLOUD PTT"
+        android:textColor="@color/text_muted"
+        android:textSize="12sp"
+        android:letterSpacing="0.15"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- LCD Display Screen Container -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardLcd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@color/radio_lcd_bg"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="6dp"
+        app:layout_constraintTop_toBottomOf="@id/tvBrand">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Channel Header & Status -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tvChannelTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CANAL: CARGANDO..."
+                    android:textColor="@color/radio_lcd_text"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace" />
+
+                <TextView
+                    android:id="@+id/tvFrequency"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="ONLINE"
+                    android:textColor="@color/radio_lcd_text"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </RelativeLayout>
+
+            <!-- Channel Description -->
+            <TextView
+                android:id="@+id/tvChannelDesc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Sincronizando con Supabase..."
+                android:textColor="@color/radio_lcd_dim"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="10dp"
+                android:background="@color/radio_lcd_dim" />
+
+            <!-- Server Info & LEDs -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvServerInfo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="POOL: CUENTA 1"
+                    android:textColor="@color/radio_lcd_text"
+                    android:textSize="11sp"
+                    android:fontFamily="monospace" />
+
+                <!-- TX LED -->
+                <TextView
+                    android:id="@+id/ledTx"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" TX "
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@color/led_off"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:layout_marginEnd="8dp" />
+
+                <!-- RX LED -->
+                <TextView
+                    android:id="@+id/ledRx"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" RX "
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@color/led_off"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Channel Selector Bar -->
+    <LinearLayout
+        android:id="@+id/channelControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/cardLcd">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPrevChannel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="◀ ANTERIOR"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/radio_metal" />
+
+        <Space
+            android:layout_width="16dp"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNextChannel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SIGUIENTE ▶"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/radio_metal" />
+    </LinearLayout>
+
+    <!-- Central PTT (Push-To-Talk) Button Area -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardPtt"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        app:cardCornerRadius="110dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="@color/ptt_idle_base"
+        app:layout_constraintTop_toBottomOf="@id/channelControls"
+        app:layout_constraintBottom_toTopOf="@id/tvInstruction"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <RelativeLayout
+            android:id="@+id/btnPttArea"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/ivMicIcon"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_centerHorizontal="true"
+                android:src="@android:drawable/ic_btn_speak_now"
+                app:tint="@color/white" />
+
+            <TextView
+                android:id="@+id/tvPttText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/ivMicIcon"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="12dp"
+                android:text="PTT"
+                android:textStyle="bold"
+                android:textSize="24sp"
+                android:textColor="@color/white"
+                android:letterSpacing="0.2" />
+
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bottom Instruction Guide -->
+    <TextView
+        android:id="@+id/tvInstruction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/ptt_idle"
+        android:textColor="@color/text_muted"
+        android:textSize="13sp"
+        android:textAlignment="center"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
