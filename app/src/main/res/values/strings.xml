@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Walkie Talkie Pro</string>
+    <string name="ptt_idle">MANTÉN PRESIONADO PARA HABLAR</string>
+    <string name="ptt_transmitting">TRANSMITIENDO EN VIVO...</string>
+    <string name="channel_label">CANAL SELECCIONADO</string>
+    <string name="status_connected">EN LÍNEA</string>
+    <string name="status_receiving">RECIBIENDO AUDIO...</string>
+    <string name="status_connecting">CONECTANDO A SUPABASE...</string>
+</resources>
