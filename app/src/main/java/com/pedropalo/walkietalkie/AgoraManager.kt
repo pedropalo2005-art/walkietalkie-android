@@ -76,7 +76,7 @@ class AgoraManager(
             // Configure audio profile optimized for walkie-talkie / voice
             rtcEngine?.setAudioProfile(
                 Constants.AUDIO_PROFILE_SPEECH_STANDARD,
-                Constants.AUDIO_SCENARIO_COMMUNICATION
+                Constants.AUDIO_SCENARIO_DEFAULT
             )
             rtcEngine?.enableAudio()
             rtcEngine?.setDefaultAudioRoutetoSpeakerphone(true)
