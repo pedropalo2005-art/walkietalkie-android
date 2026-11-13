@@ -19,6 +19,7 @@ data class AgoraAccount(
     val id: Int,
     val name: String,
     val appId: String,
+    val appCertificate: String,
     val isActive: Boolean
 )
 
@@ -73,6 +74,7 @@ object SupabaseClient {
                     id = obj.getInt("id"),
                     name = obj.getString("account_name"),
                     appId = obj.getString("app_id"),
+                    appCertificate = obj.optString("app_certificate", ""),
                     isActive = obj.getBoolean("is_active")
                 )
             }
@@ -84,7 +86,6 @@ object SupabaseClient {
 
     suspend fun rotateToNextAccount(currentId: Int): AgoraAccount? = withContext(Dispatchers.IO) {
         try {
-            // 1. Mark current account as inactive and suspended
             val patchJson = JSONObject().apply {
                 put("is_active", false)
                 put("is_suspended", true)
@@ -97,7 +98,6 @@ object SupabaseClient {
                 .build()
             httpClient.newCall(patchReq).execute()
 
-            // 2. Select next available account
             val nextReq = Request.Builder()
                 .url("$SUPABASE_URL/rest/v1/agora_pool?is_suspended=eq.false&id=neq.$currentId&limit=1")
                 .addHeader("apikey", ANON_KEY)
@@ -109,8 +109,7 @@ object SupabaseClient {
             if (arr.length() > 0) {
                 val nextObj = arr.getJSONObject(0)
                 val nextId = nextObj.getInt("id")
-                
-                // Activate next account
+
                 val activateJson = JSONObject().apply {
                     put("is_active", true)
                 }
@@ -126,6 +125,7 @@ object SupabaseClient {
                     id = nextId,
                     name = nextObj.getString("account_name"),
                     appId = nextObj.getString("app_id"),
+                    appCertificate = nextObj.optString("app_certificate", ""),
                     isActive = true
                 )
             }

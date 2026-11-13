@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
             if (activeAgoraAccount != null) {
                 binding.tvServerInfo.text = "POOL: ${activeAgoraAccount!!.name}"
-                agoraManager.initEngine(activeAgoraAccount!!.appId)
+                agoraManager.initEngine(activeAgoraAccount!!.appId, activeAgoraAccount!!.appCertificate)
 
                 if (channelList.isNotEmpty()) {
                     updateChannelUi(0)
@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
     // Agora Callbacks
     override fun onJoinedChannel(channel: String, uid: Int) {
-        binding.tvFrequency.text = "CONECTADO"
+        binding.tvFrequency.text = "ONLINE [UID:$uid]"
         binding.tvFrequency.setTextColor(ContextCompat.getColor(this, R.color.radio_lcd_text))
     }
 
@@ -198,7 +198,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         if (isTalking) {
             // RX Green LED ON
             binding.ledRx.setBackgroundColor(ContextCompat.getColor(this, R.color.led_rx_active))
-            binding.tvChannelDesc.text = "Usuario $uid transmitiendo en la frecuencia..."
+            binding.tvChannelDesc.text = "Usuario $uid transmitiendo..."
         } else {
             // RX Green LED OFF
             binding.ledRx.setBackgroundColor(ContextCompat.getColor(this, R.color.led_off))
@@ -210,7 +210,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
     override fun onEngineError(errCode: Int) {
         // Automatic failover when Agora quota error or suspension occurs
-        if (errCode == 110 || errCode == 101 || errCode == 102) {
+        if (errCode == 110 || errCode == 109 || errCode == 101 || errCode == 102) {
             binding.tvServerInfo.text = "ROTANDO CUENTA AGORA..."
             lifecycleScope.launch {
                 val currentId = activeAgoraAccount?.id ?: 1
@@ -218,7 +218,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
                 if (nextAccount != null) {
                     activeAgoraAccount = nextAccount
                     binding.tvServerInfo.text = "POOL: ${nextAccount.name}"
-                    agoraManager.initEngine(nextAccount.appId)
+                    agoraManager.initEngine(nextAccount.appId, nextAccount.appCertificate)
                     if (channelList.isNotEmpty()) {
                         agoraManager.joinChannel(channelList[currentChannelIndex].id)
                     }
