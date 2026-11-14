@@ -15,6 +15,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
 class WalkieTalkieService : Service() {
+    companion object {
         const val CHANNEL_ID = "walkietalkie_channel_id"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START = "ACTION_START"
