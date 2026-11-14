@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
         initVibrator()
         agoraManager = AgoraManager(this, this)
+        agoraManager.initEngine(SupabaseClient.DEFAULT_ACCOUNT.appId, SupabaseClient.DEFAULT_ACCOUNT.appCertificate)
 
         checkAndRequestPermissions()
         setupListeners()
@@ -84,23 +85,19 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
     private fun setupWalkieTalkie() {
         lifecycleScope.launch {
-            binding.tvChannelDesc.text = "Consultando canales en Supabase..."
+            binding.tvChannelDesc.text = "Sincronizando canales..."
             channelList = SupabaseClient.getChannels()
-            activeAgoraAccount = SupabaseClient.getActiveAgoraAccount()
+            val account = SupabaseClient.getActiveAgoraAccount()
+            activeAgoraAccount = account
 
-            if (activeAgoraAccount != null) {
-                binding.tvServerInfo.text = "POOL: ${activeAgoraAccount!!.name}"
-                agoraManager.initEngine(activeAgoraAccount!!.appId, activeAgoraAccount!!.appCertificate)
+            binding.tvServerInfo.text = "POOL: ${account.name}"
+            agoraManager.initEngine(account.appId, account.appCertificate)
 
-                if (channelList.isNotEmpty()) {
-                    updateChannelUi(0)
-                } else {
-                    binding.tvChannelTitle.text = "CANAL 1 - GENERAL"
-                    agoraManager.joinChannel("canal-1")
-                }
+            if (channelList.isNotEmpty()) {
+                updateChannelUi(0)
             } else {
-                binding.tvServerInfo.text = "ERROR: Sin cuentas de Agora"
-                Toast.makeText(this@MainActivity, "No hay cuentas activas en Supabase agora_pool", Toast.LENGTH_LONG).show()
+                binding.tvChannelTitle.text = "CANAL 1 - GENERAL"
+                agoraManager.joinChannel("canal-1")
             }
         }
     }
@@ -239,14 +236,8 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         }
     }
 
-    override fun onEngineError(errCode: Int) {
-        val desc = try {
-            RtcEngine.getErrorDescription(Math.abs(errCode))
-        } catch (e: Exception) {
-            ""
-        }
-        val msg = if (!desc.isNullOrBlank()) "ERR $errCode: $desc" else "AGORA ERR: $errCode"
-        binding.tvFrequency.text = msg
+    override fun onEngineError(errCode: Int, message: String) {
+        binding.tvFrequency.text = message
         binding.tvFrequency.setTextColor(Color.RED)
 
         // Automatic failover when Agora quota error or suspension occurs

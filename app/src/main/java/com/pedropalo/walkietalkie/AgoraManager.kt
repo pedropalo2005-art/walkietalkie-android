@@ -25,12 +25,14 @@ class AgoraManager(
         fun onRemoteUserOffline(uid: Int)
         fun onRemoteUserTalking(isTalking: Boolean, uid: Int)
         fun onConnectionChanged(state: Int, reason: Int)
-        fun onEngineError(errCode: Int)
+        fun onEngineError(errCode: Int, message: String)
     }
 
     private var rtcEngine: RtcEngine? = null
-    private var currentAppId: String = ""
-    private var currentAppCert: String = ""
+    var currentAppId: String = ""
+        private set
+    var currentAppCert: String = ""
+        private set
     var currentChannel: String? = null
         private set
     var isJoined: Boolean = false
@@ -108,30 +110,61 @@ class AgoraManager(
         }
 
         override fun onError(err: Int) {
+            val desc = try { RtcEngine.getErrorDescription(Math.abs(err)) } catch (e: Exception) { "" }
             mainHandler.post {
-                listener.onEngineError(err)
+                listener.onEngineError(err, "Agora onError $err: $desc")
             }
         }
     }
 
-    fun initEngine(appId: String, appCert: String) {
-        // Destroy existing instance only if one exists
-        if (rtcEngine != null) {
-            destroyEngine()
-        }
-
+    fun initEngine(appId: String, appCert: String): Boolean {
         currentAppId = appId.trim()
         currentAppCert = appCert.trim()
 
+        if (rtcEngine != null) {
+            return true
+        }
+
+        // Attempt 1: Config builder
         try {
             val config = RtcEngineConfig().apply {
-                mContext = context.applicationContext
+                mContext = context
                 mAppId = currentAppId
                 mEventHandler = rtcEventHandler
                 mChannelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             }
             rtcEngine = RtcEngine.create(config)
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
 
+        // Attempt 2: Direct static factory
+        if (rtcEngine == null) {
+            try {
+                rtcEngine = RtcEngine.create(context, currentAppId, rtcEventHandler)
+            } catch (t: Throwable) {
+                t.printStackTrace()
+            }
+        }
+
+        // Attempt 3: Application context
+        if (rtcEngine == null) {
+            try {
+                rtcEngine = RtcEngine.create(context.applicationContext, currentAppId, rtcEventHandler)
+            } catch (t: Throwable) {
+                t.printStackTrace()
+            }
+        }
+
+        if (rtcEngine == null) {
+            val msg = "Fallo RtcEngine.create (AppID='$currentAppId')"
+            mainHandler.post {
+                listener.onEngineError(-1001, msg)
+            }
+            return false
+        }
+
+        try {
             rtcEngine?.setAudioProfile(
                 Constants.AUDIO_PROFILE_SPEECH_STANDARD,
                 Constants.AUDIO_SCENARIO_DEFAULT
@@ -148,27 +181,29 @@ class AgoraManager(
             ensureLoudspeaker()
         } catch (e: Exception) {
             e.printStackTrace()
-            mainHandler.post {
-                listener.onEngineError(-1001) // Engine creation failure
-            }
         }
+
+        return true
     }
 
     fun joinChannel(channelName: String) {
-        if (currentChannel == channelName && isJoined) {
-            return
-        }
         currentChannel = channelName
 
         if (rtcEngine == null) {
-            initEngine(currentAppId, currentAppCert)
+            val ok = initEngine(currentAppId, currentAppCert)
+            if (!ok || rtcEngine == null) {
+                mainHandler.post {
+                    listener.onEngineError(-1002, "rtcEngine es null (AppID='$currentAppId')")
+                }
+                return
+            }
         }
 
         // Generate dynamic token
         var token = ""
+        var tokenErr = ""
         if (currentAppCert.isNotBlank()) {
             try {
-                // Try Token 007 first
                 token = RtcTokenBuilder2().buildTokenWithUid(
                     currentAppId,
                     currentAppCert,
@@ -178,13 +213,12 @@ class AgoraManager(
                     86400,
                     86400
                 )
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (e: Throwable) {
+                tokenErr = "T007: ${e.message}"
             }
 
             if (token.isBlank()) {
                 try {
-                    // Fallback to Token 006
                     val expireTs = (System.currentTimeMillis() / 1000 + 86400).toInt()
                     token = RtcTokenBuilder().buildTokenWithUid(
                         currentAppId,
@@ -194,10 +228,17 @@ class AgoraManager(
                         RtcTokenBuilder.Role.Role_Publisher,
                         expireTs
                     )
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                } catch (e: Throwable) {
+                    tokenErr += " | T006: ${e.message}"
                 }
             }
+        }
+
+        if (token.isBlank() && currentAppCert.isNotBlank()) {
+            mainHandler.post {
+                listener.onEngineError(-1003, "Token vacio ($tokenErr)")
+            }
+            return
         }
 
         val options = ChannelMediaOptions().apply {
@@ -207,10 +248,12 @@ class AgoraManager(
             publishMicrophoneTrack = true
         }
 
-        val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1002
+        val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1004
         if (res != 0) {
+            val desc = try { RtcEngine.getErrorDescription(Math.abs(res)) } catch(e: Exception) { "" }
+            val err = "ERR JOIN $res: $desc (tkLen=${token.length})"
             mainHandler.post {
-                listener.onEngineError(res)
+                listener.onEngineError(res, err)
             }
         }
     }
