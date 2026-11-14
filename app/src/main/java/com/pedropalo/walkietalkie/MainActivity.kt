@@ -10,7 +10,9 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -48,6 +50,22 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Keep screen awake while app is visible
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Show over lockscreen if desired
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
+
         initVibrator()
         agoraManager = AgoraManager(this, this)
         agoraManager.initEngine(SupabaseClient.DEFAULT_ACCOUNT.appId, SupabaseClient.DEFAULT_ACCOUNT.appCertificate)
@@ -71,6 +89,9 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         val allGranted = permissionsToRequest.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
@@ -90,15 +111,21 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
             val account = SupabaseClient.getActiveAgoraAccount()
             activeAgoraAccount = account
 
-            binding.tvServerInfo.text = "POOL: ${account.name}"
+            // Anonymized UI: only shows CUENTA 1, CUENTA 2, etc.
+            binding.tvServerInfo.text = "POOL: CUENTA ${account.id}"
             agoraManager.initEngine(account.appId, account.appCertificate)
 
-            if (channelList.isNotEmpty()) {
+            val chName = if (channelList.isNotEmpty()) {
                 updateChannelUi(0)
+                channelList[0].name
             } else {
                 binding.tvChannelTitle.text = "CANAL 1 - GENERAL"
                 agoraManager.joinChannel("canal-1")
+                "Canal 1 - General"
             }
+
+            // Start background listening service so it keeps receiving with screen off
+            WalkieTalkieService.startService(this@MainActivity, chName)
         }
     }
 
@@ -109,6 +136,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         binding.tvChannelTitle.text = ch.name.uppercase()
         binding.tvChannelDesc.text = ch.description
         agoraManager.switchChannel(ch.id)
+        WalkieTalkieService.startService(this, ch.name)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -142,6 +170,27 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
                 else -> false
             }
         }
+    }
+
+    // Physical Button PTT: Hold Volume Down / Headset / PTT button to speak
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyCode == 286 /* KEYCODE_PTT */) {
+            if (!isTransmitting) {
+                onPttPressed()
+            }
+            return true // Consume key event
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyCode == 286 /* KEYCODE_PTT */) {
+            if (isTransmitting) {
+                onPttReleased()
+            }
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun onPttPressed() {
@@ -248,12 +297,12 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
                 val nextAccount = SupabaseClient.rotateToNextAccount(currentId)
                 if (nextAccount != null) {
                     activeAgoraAccount = nextAccount
-                    binding.tvServerInfo.text = "POOL: ${nextAccount.name}"
+                    binding.tvServerInfo.text = "POOL: CUENTA ${nextAccount.id}"
                     agoraManager.initEngine(nextAccount.appId, nextAccount.appCertificate)
                     if (channelList.isNotEmpty()) {
                         agoraManager.joinChannel(channelList[currentChannelIndex].id)
                     }
-                    Toast.makeText(this@MainActivity, "Cuenta rotada automáticamente: ${nextAccount.name}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Cuenta rotada automáticamente: CUENTA ${nextAccount.id}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -261,6 +310,7 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
     override fun onDestroy() {
         super.onDestroy()
+        WalkieTalkieService.stopService(this)
         agoraManager.destroyEngine()
     }
 }

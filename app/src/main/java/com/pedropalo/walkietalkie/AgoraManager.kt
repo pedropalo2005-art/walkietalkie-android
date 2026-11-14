@@ -245,7 +245,7 @@ class AgoraManager(
             channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             autoSubscribeAudio = true
-            publishMicrophoneTrack = true
+            publishMicrophoneTrack = false
         }
 
         val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1004
@@ -270,11 +270,19 @@ class AgoraManager(
     }
 
     fun startTransmitting() {
+        val options = ChannelMediaOptions().apply {
+            publishMicrophoneTrack = true
+        }
+        rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(false)
         playMicBeep()
     }
 
     fun stopTransmitting() {
+        val options = ChannelMediaOptions().apply {
+            publishMicrophoneTrack = false
+        }
+        rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(true)
         playRogerBeep()
     }
