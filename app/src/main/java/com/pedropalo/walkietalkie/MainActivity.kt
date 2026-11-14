@@ -3,13 +3,17 @@ package com.pedropalo.walkietalkie
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -71,7 +75,31 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         agoraManager.initEngine(SupabaseClient.DEFAULT_ACCOUNT.appId, SupabaseClient.DEFAULT_ACCOUNT.appCertificate)
 
         checkAndRequestPermissions()
+        checkBatteryOptimization()
         setupListeners()
+    }
+
+    private fun checkBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                    @SuppressLint("BatteryLife")
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Move task to back instead of destroying Activity so radio keeps listening in background!
+        moveTaskToBack(true)
     }
 
     private fun initVibrator() {
@@ -317,7 +345,8 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
 
     override fun onDestroy() {
         super.onDestroy()
-        WalkieTalkieService.stopService(this)
-        agoraManager.destroyEngine()
+        // Keep WalkieTalkieService alive in background so incoming radio audio continues playing
+        // when Android reclaims Activity memory while running other apps (WhatsApp, etc.).
+        // To turn off the radio, use the "Apagar Radio" action in the persistent notification.
     }
 }

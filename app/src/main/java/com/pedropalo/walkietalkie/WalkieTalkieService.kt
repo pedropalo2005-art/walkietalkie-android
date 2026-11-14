@@ -57,6 +57,7 @@ class WalkieTalkieService : Service() {
         if (intent?.action == ACTION_STOP) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            System.exit(0)
             return START_NOT_STICKY
         }
 
@@ -65,19 +66,11 @@ class WalkieTalkieService : Service() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
+                var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    )
-                } else {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    )
+                    type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
                 }
+                startForeground(NOTIFICATION_ID, notification, type)
             } catch (e: Exception) {
                 startForeground(NOTIFICATION_ID, notification)
             }
@@ -118,10 +111,11 @@ class WalkieTalkieService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Radio Walkie Talkie En Línea",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Mantiene el audio y la frecuencia activos con la pantalla apagada"
-                setShowBadge(false)
+                description = "Mantiene el audio y la frecuencia activos en segundo plano y pantalla apagada"
+                setShowBadge(true)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
@@ -130,7 +124,7 @@ class WalkieTalkieService : Service() {
 
     private fun buildNotification(channelName: String): Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -139,14 +133,27 @@ class WalkieTalkieService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val stopIntent = Intent(this, WalkieTalkieService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val pendingStopIntent = PendingIntent.getService(
+            this,
+            1,
+            stopIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Walkie-Talkie Activo")
-            .setContentText("En línea en $channelName - Escuchando transmisiones")
+            .setContentTitle("📻 Walkie-Talkie Activo")
+            .setContentText("En línea en $channelName - Escuchando")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(false)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Apagar Radio", pendingStopIntent)
             .build()
     }
 
