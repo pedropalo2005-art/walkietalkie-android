@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/dialog_bg"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="➕ CREAR NUEVO CANAL"
+        android:textColor="@color/radio_lcd_text"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Configura una nueva frecuencia para tu equipo"
+        android:textColor="@color/text_muted"
+        android:textSize="12sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="12dp"
+        android:background="@color/radio_metal" />
+
+    <!-- Channel Name Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nombre del Canal:"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etChannelName"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="6dp"
+        android:background="@color/input_bg"
+        android:hint="Ej. Seguridad, Operaciones, Logística..."
+        android:textColorHint="@color/text_muted"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:paddingHorizontal="14dp"
+        android:inputType="textCapWords"
+        android:maxLines="1" />
+
+    <!-- Privacy Type Selector -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Tipo de Acceso:"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/rgPrivacy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <RadioButton
+            android:id="@+id/rbPublic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🌐 Público (Cualquiera puede entrar)"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:checked="true"
+            android:buttonTint="@color/badge_public" />
+
+        <RadioButton
+            android:id="@+id/rbPrivate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="🔒 Privado (Protegido con PIN de 4 dígitos)"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:buttonTint="@color/badge_private" />
+    </RadioGroup>
+
+    <!-- PIN Container (Hidden by default, shown when Private is selected) -->
+    <LinearLayout
+        android:id="@+id/llPinContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Define el PIN de 4 dígitos:"
+            android:textColor="@color/badge_private"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etPin"
+            android:layout_width="160dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="6dp"
+            android:background="@color/input_bg"
+            android:hint="••••"
+            android:textColorHint="@color/text_muted"
+            android:textColor="@color/badge_private"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:letterSpacing="0.4"
+            android:inputType="numberPassword"
+            android:maxLength="4" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Comparte este PIN con tus compañeros para que se unan"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelCreate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancelar"
+            android:textColor="@color/text_muted"
+            app:backgroundTint="@color/radio_metal" />
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmCreate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Crear Canal"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/ptt_active_base" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -20,4 +20,10 @@
     
     <color name="white">#FFFFFF</color>
     <color name="text_muted">#8A99AD</color>
+    
+    <!-- Channel Privacy & Dialog Colors -->
+    <color name="badge_private">#FF9500</color>
+    <color name="badge_public">#30D158</color>
+    <color name="dialog_bg">#1A1E24</color>
+    <color name="input_bg">#252C36</color>
 </resources>

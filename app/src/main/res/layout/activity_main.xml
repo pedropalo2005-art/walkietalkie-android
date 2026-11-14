@@ -64,16 +64,40 @@
                     android:fontFamily="monospace" />
             </RelativeLayout>
 
-            <!-- Channel Description -->
-            <TextView
-                android:id="@+id/tvChannelDesc"
+            <!-- Channel Description & Type Badge -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="4dp"
-                android:text="Sincronizando con Supabase..."
-                android:textColor="@color/radio_lcd_dim"
-                android:textSize="12sp"
-                android:fontFamily="monospace" />
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvChannelType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🌐 PÚBLICO"
+                    android:textColor="@color/badge_public"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@color/input_bg"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:fontFamily="monospace"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/tvChannelDesc"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sincronizando con Supabase..."
+                    android:textColor="@color/radio_lcd_dim"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
@@ -134,31 +158,55 @@
         android:id="@+id/channelControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="16dp"
         android:orientation="horizontal"
         android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/cardLcd">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPrevChannel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="◀ ANTERIOR"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="◀"
+            android:textSize="14sp"
             android:textColor="@color/white"
+            android:padding="0dp"
+            app:cornerRadius="8dp"
             app:backgroundTint="@color/radio_metal" />
 
-        <Space
-            android:layout_width="16dp"
-            android:layout_height="wrap_content" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChannelList"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="6dp"
+            android:text="📋 CANALES"
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/radio_metal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateChannel"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="➕ CREAR"
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/ptt_idle_base" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNextChannel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="SIGUIENTE ▶"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="▶"
+            android:textSize="14sp"
             android:textColor="@color/white"
+            android:padding="0dp"
+            app:cornerRadius="8dp"
             app:backgroundTint="@color/radio_metal" />
     </LinearLayout>
 

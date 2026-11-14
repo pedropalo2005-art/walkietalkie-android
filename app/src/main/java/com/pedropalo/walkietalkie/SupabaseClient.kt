@@ -12,7 +12,9 @@ import org.json.JSONObject
 data class RadioChannel(
     val id: String,
     val name: String,
-    val description: String
+    val description: String,
+    val isPrivate: Boolean = false,
+    val pin: String? = null
 )
 
 data class AgoraAccount(
@@ -45,7 +47,7 @@ object SupabaseClient {
 
     suspend fun getChannels(): List<RadioChannel> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url("$SUPABASE_URL/rest/v1/channels?select=*&order=id.asc")
+            .url("$SUPABASE_URL/rest/v1/channels?select=*&order=created_at.asc")
             .addHeader("apikey", ANON_KEY)
             .addHeader("Authorization", "Bearer $ANON_KEY")
             .build()
@@ -61,7 +63,9 @@ object SupabaseClient {
                     RadioChannel(
                         id = obj.getString("id"),
                         name = obj.getString("name"),
-                        description = obj.optString("description", "")
+                        description = obj.optString("description", ""),
+                        isPrivate = obj.optBoolean("is_private", false),
+                        pin = if (obj.has("pin") && !obj.isNull("pin")) obj.getString("pin") else null
                     )
                 )
             }
@@ -70,6 +74,54 @@ object SupabaseClient {
             return@withContext DEFAULT_CHANNELS
         }
         if (channels.isEmpty()) DEFAULT_CHANNELS else channels
+    }
+
+    suspend fun createChannel(name: String, isPrivate: Boolean, pin: String?): Result<RadioChannel> = withContext(Dispatchers.IO) {
+        val sanitized = name.lowercase().replace(Regex("[^a-z0-9]"), "-").take(15).trim('-')
+        val prefix = if (isPrivate) "priv-" else "pub-"
+        val uniqueId = "$prefix$sanitized-${System.currentTimeMillis() % 100000}"
+
+        val json = JSONObject().apply {
+            put("id", uniqueId)
+            put("name", name.trim())
+            put("description", if (isPrivate) "Canal privado protegido con PIN" else "Canal público abierto")
+            put("is_private", isPrivate)
+            if (isPrivate && !pin.isNullOrBlank()) {
+                put("pin", pin.trim())
+            }
+        }
+
+        val request = Request.Builder()
+            .url("$SUPABASE_URL/rest/v1/channels")
+            .addHeader("apikey", ANON_KEY)
+            .addHeader("Authorization", "Bearer $ANON_KEY")
+            .addHeader("Prefer", "return=representation")
+            .post(json.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        try {
+            val response = httpClient.newCall(request).execute()
+            val body = response.body?.string() ?: ""
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code}: $body"))
+            }
+            val array = JSONArray(body)
+            if (array.length() > 0) {
+                val obj = array.getJSONObject(0)
+                val channel = RadioChannel(
+                    id = obj.getString("id"),
+                    name = obj.getString("name"),
+                    description = obj.optString("description", ""),
+                    isPrivate = obj.optBoolean("is_private", false),
+                    pin = if (obj.has("pin") && !obj.isNull("pin")) obj.getString("pin") else null
+                )
+                return@withContext Result.success(channel)
+            }
+            Result.failure(Exception("Respuesta vacía del servidor"))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
     }
 
     suspend fun getActiveAgoraAccount(): AgoraAccount = withContext(Dispatchers.IO) {
