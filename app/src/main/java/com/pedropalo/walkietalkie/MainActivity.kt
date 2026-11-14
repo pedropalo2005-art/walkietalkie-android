@@ -172,25 +172,32 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         }
     }
 
-    // Physical Button PTT: Hold Volume Down / Headset / PTT button to speak
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyCode == 286 /* KEYCODE_PTT */) {
-            if (!isTransmitting) {
-                onPttPressed()
-            }
-            return true // Consume key event
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onResume() {
+        super.onResume()
+        agoraManager.ensureLoudspeaker()
     }
 
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+    // Physical Button PTT: Hold Volume Down / Headset / PTT button to speak
+    // Intercepted via dispatchKeyEvent so Android OS NEVER reduces or mutes the volume
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_HEADSETHOOK || keyCode == 286 /* KEYCODE_PTT */) {
-            if (isTransmitting) {
-                onPttReleased()
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    // repeatCount == 0 ensures only the first press triggers, avoiding OS auto-repeat
+                    if (event.repeatCount == 0 && !isTransmitting) {
+                        onPttPressed()
+                    }
+                }
+                KeyEvent.ACTION_UP -> {
+                    if (isTransmitting) {
+                        onPttReleased()
+                    }
+                }
             }
-            return true
+            return true // Consume event COMPLETELY: Android will never reduce the volume!
         }
-        return super.onKeyUp(keyCode, event)
+        return super.dispatchKeyEvent(event)
     }
 
     private fun onPttPressed() {

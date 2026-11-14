@@ -174,6 +174,8 @@ class AgoraManager(
             rtcEngine?.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
             rtcEngine?.setDefaultAudioRoutetoSpeakerphone(true)
             rtcEngine?.setEnableSpeakerphone(true)
+            rtcEngine?.adjustPlaybackSignalVolume(150)
+            rtcEngine?.adjustRecordingSignalVolume(120)
             rtcEngine?.enableAudioVolumeIndication(200, 3, true)
 
             // Start with microphone muted until PTT is pressed
@@ -292,7 +294,17 @@ class AgoraManager(
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
             audioManager.isSpeakerphoneOn = true
+
+            // Restore voice call & media volume so user always hears incoming voice loudly
+            val maxVoice = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+            audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoice, 0)
+
+            val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic, 0)
+
             rtcEngine?.setEnableSpeakerphone(true)
+            rtcEngine?.adjustPlaybackSignalVolume(150)
+            rtcEngine?.adjustRecordingSignalVolume(120)
         } catch (e: Exception) {
             e.printStackTrace()
         }
