@@ -73,8 +73,8 @@ object SupabaseClient {
                 return@withContext AgoraAccount(
                     id = obj.getInt("id"),
                     name = obj.getString("account_name"),
-                    appId = obj.getString("app_id"),
-                    appCertificate = obj.optString("app_certificate", ""),
+                    appId = obj.getString("app_id").trim(),
+                    appCertificate = obj.optString("app_certificate", "").trim(),
                     isActive = obj.getBoolean("is_active")
                 )
             }
@@ -124,8 +124,8 @@ object SupabaseClient {
                 return@withContext AgoraAccount(
                     id = nextId,
                     name = nextObj.getString("account_name"),
-                    appId = nextObj.getString("app_id"),
-                    appCertificate = nextObj.optString("app_certificate", ""),
+                    appId = nextObj.getString("app_id").trim(),
+                    appCertificate = nextObj.optString("app_certificate", "").trim(),
                     isActive = true
                 )
             }

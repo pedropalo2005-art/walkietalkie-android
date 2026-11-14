@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 import android.util.Base64;
 
 /**
- * Provides cryptographic, encoding, compression, and token utility functions for Android.
+ * Cryptographic, encoding, compression, and token utilities for Android.
  */
 public class Utils {
     public static final long HMAC_SHA256_LENGTH = 32;
@@ -78,7 +78,9 @@ public class Utils {
     }
 
     public static byte[] compress(byte[] data) {
-        byte[] output;
+        if (data == null || data.length == 0) {
+            return new byte[0];
+        }
         Deflater deflater = new Deflater();
         ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
 
@@ -87,41 +89,42 @@ public class Utils {
             deflater.setInput(data);
             deflater.finish();
 
-            byte[] buf = new byte[data.length];
+            byte[] buf = new byte[1024];
             while (!deflater.finished()) {
                 int i = deflater.deflate(buf);
                 bos.write(buf, 0, i);
             }
-            output = bos.toByteArray();
+            return bos.toByteArray();
         } catch (Exception e) {
-            output = data;
             e.printStackTrace();
+            return data;
         } finally {
             deflater.end();
         }
-
-        return output;
     }
 
     public static byte[] decompress(byte[] data) {
+        if (data == null || data.length == 0) {
+            return new byte[0];
+        }
         Inflater inflater = new Inflater();
         ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
 
         try {
             inflater.setInput(data);
-            byte[] buf = new byte[8192];
+            byte[] buf = new byte[1024];
             int len;
 
             while ((len = inflater.inflate(buf)) > 0) {
                 bos.write(buf, 0, len);
             }
+            return bos.toByteArray();
         } catch (Exception e) {
             e.printStackTrace();
+            return data;
         } finally {
             inflater.end();
         }
-
-        return bos.toByteArray();
     }
 
     public static String md5(String plainText) {

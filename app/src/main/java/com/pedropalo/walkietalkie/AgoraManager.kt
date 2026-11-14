@@ -5,6 +5,7 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
+import io.agora.media.RtcTokenBuilder
 import io.agora.media.RtcTokenBuilder2
 import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
@@ -114,15 +115,20 @@ class AgoraManager(
     }
 
     fun initEngine(appId: String, appCert: String) {
-        destroyEngine()
-        currentAppId = appId
-        currentAppCert = appCert
+        // Destroy existing instance only if one exists
+        if (rtcEngine != null) {
+            destroyEngine()
+        }
+
+        currentAppId = appId.trim()
+        currentAppCert = appCert.trim()
+
         try {
             val config = RtcEngineConfig().apply {
-                mContext = context
-                mAppId = appId
+                mContext = context.applicationContext
+                mAppId = currentAppId
                 mEventHandler = rtcEventHandler
-                mChannelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+                mChannelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             }
             rtcEngine = RtcEngine.create(config)
 
@@ -132,15 +138,19 @@ class AgoraManager(
             )
             rtcEngine?.enableAudio()
             rtcEngine?.enableLocalAudio(true)
+            rtcEngine?.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
             rtcEngine?.setDefaultAudioRoutetoSpeakerphone(true)
             rtcEngine?.setEnableSpeakerphone(true)
             rtcEngine?.enableAudioVolumeIndication(200, 3, true)
 
-            // Start with microphone muted until PTT button is pressed
+            // Start with microphone muted until PTT is pressed
             rtcEngine?.muteLocalAudioStream(true)
             ensureLoudspeaker()
         } catch (e: Exception) {
             e.printStackTrace()
+            mainHandler.post {
+                listener.onEngineError(-1001) // Engine creation failure
+            }
         }
     }
 
@@ -150,10 +160,16 @@ class AgoraManager(
         }
         currentChannel = channelName
 
-        // Generate dynamic modern Token 007 with RtcTokenBuilder2
-        val token = if (currentAppCert.isNotBlank()) {
+        if (rtcEngine == null) {
+            initEngine(currentAppId, currentAppCert)
+        }
+
+        // Generate dynamic token
+        var token = ""
+        if (currentAppCert.isNotBlank()) {
             try {
-                RtcTokenBuilder2().buildTokenWithUid(
+                // Try Token 007 first
+                token = RtcTokenBuilder2().buildTokenWithUid(
                     currentAppId,
                     currentAppCert,
                     channelName,
@@ -164,22 +180,38 @@ class AgoraManager(
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
-                ""
             }
-        } else {
-            ""
+
+            if (token.isBlank()) {
+                try {
+                    // Fallback to Token 006
+                    val expireTs = (System.currentTimeMillis() / 1000 + 86400).toInt()
+                    token = RtcTokenBuilder().buildTokenWithUid(
+                        currentAppId,
+                        currentAppCert,
+                        channelName,
+                        myUid,
+                        RtcTokenBuilder.Role.Role_Publisher,
+                        expireTs
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
 
         val options = ChannelMediaOptions().apply {
-            channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             autoSubscribeAudio = true
             publishMicrophoneTrack = true
         }
 
-        val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1
+        val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1002
         if (res != 0) {
-            listener.onEngineError(res)
+            mainHandler.post {
+                listener.onEngineError(res)
+            }
         }
     }
 

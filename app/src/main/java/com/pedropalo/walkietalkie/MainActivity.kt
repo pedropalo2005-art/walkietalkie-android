@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.pedropalo.walkietalkie.databinding.ActivityMainBinding
 import io.agora.rtc2.Constants
+import io.agora.rtc2.RtcEngine
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(), AgoraManager.Listener {
@@ -239,7 +240,15 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
     }
 
     override fun onEngineError(errCode: Int) {
-        binding.tvFrequency.text = "AGORA ERR: $errCode"
+        val desc = try {
+            RtcEngine.getErrorDescription(Math.abs(errCode))
+        } catch (e: Exception) {
+            ""
+        }
+        val msg = if (!desc.isNullOrBlank()) "ERR $errCode: $desc" else "AGORA ERR: $errCode"
+        binding.tvFrequency.text = msg
+        binding.tvFrequency.setTextColor(Color.RED)
+
         // Automatic failover when Agora quota error or suspension occurs
         if (errCode == 110 || errCode == 109 || errCode == 101 || errCode == 102) {
             binding.tvServerInfo.text = "ROTANDO CUENTA AGORA..."
