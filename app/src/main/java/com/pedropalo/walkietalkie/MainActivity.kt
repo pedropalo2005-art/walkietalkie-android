@@ -96,6 +96,15 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         initVibrator()
         loadUnlockedChannels()
         agoraManager = AgoraManager(this, this)
+        agoraManager.onTransmissionStateChangedListener = { isTx ->
+            runOnUiThread {
+                if (isTx) {
+                    onPttVisualActive()
+                } else {
+                    onPttVisualIdle()
+                }
+            }
+        }
         agoraManager.initEngine(SupabaseClient.DEFAULT_ACCOUNT.appId, SupabaseClient.DEFAULT_ACCOUNT.appCertificate)
 
         checkAndRequestPermissions()
@@ -480,36 +489,30 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
     }
 
     private fun onPttPressed() {
-        if (isTransmitting) return
-        isTransmitting = true
-
         vibrateFeedback(50)
         agoraManager.startTransmitting()
+    }
 
-        // Visual feedback
+    private fun onPttReleased() {
+        vibrateFeedback(25)
+        agoraManager.stopTransmitting()
+    }
+
+    private fun onPttVisualActive() {
+        isTransmitting = true
         binding.cardPtt.setCardBackgroundColor(ContextCompat.getColor(this, R.color.ptt_active_base))
         binding.tvPttText.text = "EN VIVO"
         binding.tvInstruction.text = getString(R.string.ptt_transmitting)
         binding.tvInstruction.setTextColor(ContextCompat.getColor(this, R.color.ptt_active_base))
-
-        // Red TX LED ON
         binding.ledTx.setBackgroundColor(ContextCompat.getColor(this, R.color.led_tx_active))
     }
 
-    private fun onPttReleased() {
-        if (!isTransmitting) return
+    private fun onPttVisualIdle() {
         isTransmitting = false
-
-        vibrateFeedback(25)
-        agoraManager.stopTransmitting()
-
-        // Reset visual feedback
         binding.cardPtt.setCardBackgroundColor(ContextCompat.getColor(this, R.color.ptt_idle_base))
         binding.tvPttText.text = "PTT"
         binding.tvInstruction.text = getString(R.string.ptt_idle)
         binding.tvInstruction.setTextColor(ContextCompat.getColor(this, R.color.text_muted))
-
-        // Red TX LED OFF
         binding.ledTx.setBackgroundColor(ContextCompat.getColor(this, R.color.led_off))
     }
 

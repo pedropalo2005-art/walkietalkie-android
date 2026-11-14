@@ -18,6 +18,10 @@ class AgoraManager(
     private val context: Context,
     private val listener: Listener
 ) {
+    companion object {
+        var instance: AgoraManager? = null
+            private set
+    }
 
     interface Listener {
         fun onJoinedChannel(channel: String, uid: Int)
@@ -37,6 +41,9 @@ class AgoraManager(
         private set
     var isJoined: Boolean = false
         private set
+    var isTransmitting: Boolean = false
+        private set
+    var onTransmissionStateChangedListener: ((Boolean) -> Unit)? = null
 
     private var toneGen: ToneGenerator? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -45,6 +52,7 @@ class AgoraManager(
     val myUid: Int = Random.nextInt(100000, 999999)
 
     init {
+        instance = this
         try {
             toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 80)
         } catch (e: Exception) {
@@ -272,21 +280,31 @@ class AgoraManager(
     }
 
     fun startTransmitting() {
+        if (isTransmitting) return
+        isTransmitting = true
         val options = ChannelMediaOptions().apply {
             publishMicrophoneTrack = true
         }
         rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(false)
         playMicBeep()
+        mainHandler.post {
+            onTransmissionStateChangedListener?.invoke(true)
+        }
     }
 
     fun stopTransmitting() {
+        if (!isTransmitting) return
+        isTransmitting = false
         val options = ChannelMediaOptions().apply {
             publishMicrophoneTrack = false
         }
         rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(true)
         playRogerBeep()
+        mainHandler.post {
+            onTransmissionStateChangedListener?.invoke(false)
+        }
     }
 
     fun ensureLoudspeaker() {
@@ -327,6 +345,9 @@ class AgoraManager(
     }
 
     fun destroyEngine() {
+        if (instance == this) {
+            instance = null
+        }
         isJoined = false
         currentChannel = null
         try {
