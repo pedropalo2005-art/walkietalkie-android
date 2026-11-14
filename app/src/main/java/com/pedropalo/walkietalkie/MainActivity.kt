@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.pedropalo.walkietalkie.databinding.ActivityMainBinding
+import io.agora.rtc2.Constants
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(), AgoraManager.Listener {
@@ -194,6 +195,15 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         binding.tvFrequency.setTextColor(ContextCompat.getColor(this, R.color.radio_lcd_text))
     }
 
+    override fun onRemoteUserJoined(uid: Int) {
+        Toast.makeText(this, "Usuario $uid se unió al canal", Toast.LENGTH_SHORT).show()
+        binding.tvChannelDesc.text = "Usuario $uid conectado en canal"
+    }
+
+    override fun onRemoteUserOffline(uid: Int) {
+        binding.tvChannelDesc.text = "Usuario $uid desconectado"
+    }
+
     override fun onRemoteUserTalking(isTalking: Boolean, uid: Int) {
         if (isTalking) {
             // RX Green LED ON
@@ -208,7 +218,28 @@ class MainActivity : AppCompatActivity(), AgoraManager.Listener {
         }
     }
 
+    override fun onConnectionChanged(state: Int, reason: Int) {
+        when (state) {
+            Constants.CONNECTION_STATE_CONNECTING -> {
+                binding.tvFrequency.text = "CONECTANDO..."
+                binding.tvFrequency.setTextColor(ContextCompat.getColor(this, R.color.radio_lcd_dim))
+            }
+            Constants.CONNECTION_STATE_CONNECTED -> {
+                binding.tvFrequency.text = "ONLINE [UID:${agoraManager.myUid}]"
+                binding.tvFrequency.setTextColor(ContextCompat.getColor(this, R.color.radio_lcd_text))
+            }
+            Constants.CONNECTION_STATE_FAILED -> {
+                binding.tvFrequency.text = "ERR CONEX ($reason)"
+                binding.tvFrequency.setTextColor(Color.RED)
+            }
+            Constants.CONNECTION_STATE_RECONNECTING -> {
+                binding.tvFrequency.text = "RECONECTANDO..."
+            }
+        }
+    }
+
     override fun onEngineError(errCode: Int) {
+        binding.tvFrequency.text = "AGORA ERR: $errCode"
         // Automatic failover when Agora quota error or suspension occurs
         if (errCode == 110 || errCode == 109 || errCode == 101 || errCode == 102) {
             binding.tvServerInfo.text = "ROTANDO CUENTA AGORA..."

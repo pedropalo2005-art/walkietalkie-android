@@ -5,7 +5,7 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
-import io.agora.media.RtcTokenBuilder
+import io.agora.media.RtcTokenBuilder2
 import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
 import io.agora.rtc2.RtcEngine
@@ -20,14 +20,21 @@ class AgoraManager(
 
     interface Listener {
         fun onJoinedChannel(channel: String, uid: Int)
+        fun onRemoteUserJoined(uid: Int)
+        fun onRemoteUserOffline(uid: Int)
         fun onRemoteUserTalking(isTalking: Boolean, uid: Int)
+        fun onConnectionChanged(state: Int, reason: Int)
         fun onEngineError(errCode: Int)
     }
 
     private var rtcEngine: RtcEngine? = null
     private var currentAppId: String = ""
     private var currentAppCert: String = ""
-    private var currentChannel: String? = null
+    var currentChannel: String? = null
+        private set
+    var isJoined: Boolean = false
+        private set
+
     private var toneGen: ToneGenerator? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -44,9 +51,23 @@ class AgoraManager(
 
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
+            isJoined = true
             mainHandler.post {
                 ensureLoudspeaker()
                 channel?.let { listener.onJoinedChannel(it, uid) }
+            }
+        }
+
+        override fun onUserJoined(uid: Int, elapsed: Int) {
+            mainHandler.post {
+                ensureLoudspeaker()
+                listener.onRemoteUserJoined(uid)
+            }
+        }
+
+        override fun onUserOffline(uid: Int, reason: Int) {
+            mainHandler.post {
+                listener.onRemoteUserOffline(uid)
             }
         }
 
@@ -58,8 +79,30 @@ class AgoraManager(
 
         override fun onRemoteAudioStateChanged(uid: Int, state: Int, reason: Int, elapsed: Int) {
             mainHandler.post {
-                val isSpeaking = (state == Constants.REMOTE_AUDIO_STATE_DECODING)
+                val isSpeaking = (state == Constants.REMOTE_AUDIO_STATE_DECODING || state == Constants.REMOTE_AUDIO_STATE_STARTING)
                 listener.onRemoteUserTalking(isSpeaking, uid)
+            }
+        }
+
+        override fun onAudioVolumeIndication(speakers: Array<out AudioVolumeInfo>?, totalVolume: Int) {
+            mainHandler.post {
+                speakers?.forEach { speaker ->
+                    if (speaker.uid != 0 && speaker.uid != myUid && speaker.volume > 5) {
+                        listener.onRemoteUserTalking(true, speaker.uid)
+                    }
+                }
+            }
+        }
+
+        override fun onConnectionStateChanged(state: Int, reason: Int) {
+            mainHandler.post {
+                if (state == Constants.CONNECTION_STATE_CONNECTED) {
+                    isJoined = true
+                    ensureLoudspeaker()
+                } else if (state == Constants.CONNECTION_STATE_DISCONNECTED || state == Constants.CONNECTION_STATE_FAILED) {
+                    isJoined = false
+                }
+                listener.onConnectionChanged(state, reason)
             }
         }
 
@@ -79,7 +122,7 @@ class AgoraManager(
                 mContext = context
                 mAppId = appId
                 mEventHandler = rtcEventHandler
-                mChannelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+                mChannelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
             }
             rtcEngine = RtcEngine.create(config)
 
@@ -89,12 +132,11 @@ class AgoraManager(
             )
             rtcEngine?.enableAudio()
             rtcEngine?.enableLocalAudio(true)
-            rtcEngine?.setClientRole(Constants.CLIENT_ROLE_BROADCASTER)
             rtcEngine?.setDefaultAudioRoutetoSpeakerphone(true)
             rtcEngine?.setEnableSpeakerphone(true)
             rtcEngine?.enableAudioVolumeIndication(200, 3, true)
 
-            // Start with microphone muted until PTT is pressed
+            // Start with microphone muted until PTT button is pressed
             rtcEngine?.muteLocalAudioStream(true)
             ensureLoudspeaker()
         } catch (e: Exception) {
@@ -103,61 +145,66 @@ class AgoraManager(
     }
 
     fun joinChannel(channelName: String) {
+        if (currentChannel == channelName && isJoined) {
+            return
+        }
         currentChannel = channelName
 
-        // Generate dynamic token if certificate is provided
+        // Generate dynamic modern Token 007 with RtcTokenBuilder2
         val token = if (currentAppCert.isNotBlank()) {
-            val expireTimestamp = (System.currentTimeMillis() / 1000 + 86400).toInt()
-            RtcTokenBuilder().buildTokenWithUid(
-                currentAppId,
-                currentAppCert,
-                channelName,
-                myUid,
-                RtcTokenBuilder.Role.Role_Publisher,
-                expireTimestamp
-            )
+            try {
+                RtcTokenBuilder2().buildTokenWithUid(
+                    currentAppId,
+                    currentAppCert,
+                    channelName,
+                    myUid,
+                    RtcTokenBuilder2.Role.ROLE_PUBLISHER,
+                    86400,
+                    86400
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ""
+            }
         } else {
             ""
         }
 
         val options = ChannelMediaOptions().apply {
-            channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+            channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
             clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             autoSubscribeAudio = true
-            publishMicrophoneTrack = false // idle
+            publishMicrophoneTrack = true
         }
 
-        rtcEngine?.joinChannel(token, channelName, myUid, options)
+        val res = rtcEngine?.joinChannel(token, channelName, myUid, options) ?: -1
+        if (res != 0) {
+            listener.onEngineError(res)
+        }
     }
 
     fun switchChannel(newChannelName: String) {
-        rtcEngine?.leaveChannel()
+        if (currentChannel == newChannelName && isJoined) {
+            return
+        }
+        if (isJoined) {
+            isJoined = false
+            rtcEngine?.leaveChannel()
+        }
         joinChannel(newChannelName)
     }
 
     fun startTransmitting() {
-        val options = ChannelMediaOptions().apply {
-            clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
-            publishMicrophoneTrack = true
-            autoSubscribeAudio = true
-        }
-        rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(false)
         playMicBeep()
     }
 
     fun stopTransmitting() {
-        val options = ChannelMediaOptions().apply {
-            clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
-            publishMicrophoneTrack = false
-            autoSubscribeAudio = true
-        }
-        rtcEngine?.updateChannelMediaOptions(options)
         rtcEngine?.muteLocalAudioStream(true)
         playRogerBeep()
     }
 
-    private fun ensureLoudspeaker() {
+    fun ensureLoudspeaker() {
         try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
@@ -185,8 +232,14 @@ class AgoraManager(
     }
 
     fun destroyEngine() {
-        rtcEngine?.leaveChannel()
-        RtcEngine.destroy()
+        isJoined = false
+        currentChannel = null
+        try {
+            rtcEngine?.leaveChannel()
+            RtcEngine.destroy()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         rtcEngine = null
     }
 }

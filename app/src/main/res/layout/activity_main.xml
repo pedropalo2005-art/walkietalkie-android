@@ -58,8 +58,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
-                    android:text="ONLINE"
-                    android:textColor="@color/radio_lcd_text"
+                    android:text="CONECTANDO..."
+                    android:textColor="@color/radio_lcd_dim"
                     android:textSize="14sp"
                     android:fontFamily="monospace" />
             </RelativeLayout>
